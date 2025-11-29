@@ -25,11 +25,13 @@
                         'butterfly-pink': '#E6007E', // 버터플라이 브랜드 핑크
                         'butterfly-blue': '#005BAC', // 버터플라이 브랜드 블루
                         'table-blue': '#2563EB',     // 탁구대 색상
+                        'share-green': '#10B981',    // 공유 버튼 초록색
                     },
                     animation: {
                         'bounce-slow': 'bounce 3s infinite',
                         'wiggle': 'wiggle 1s ease-in-out infinite',
                         'pop': 'pop 0.3s ease-out forwards',
+                        'fade-in-up': 'fadeInUp 0.5s ease-out forwards',
                     },
                     keyframes: {
                         wiggle: {
@@ -39,6 +41,10 @@
                         pop: {
                             '0%': { transform: 'scale(0.8)', opacity: '0' },
                             '100%': { transform: 'scale(1)', opacity: '1' },
+                        },
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
                         }
                     }
                 }
@@ -73,22 +79,32 @@
             transform: translateY(4px);
         }
 
-        /* 탁구공 애니메이션 */
-        .ping-pong-ball {
-            width: 40px;
-            height: 40px;
-            background: white;
+        .doodle-input {
             border: 3px solid #1e293b;
-            border-radius: 50%;
-            position: absolute;
-            z-index: 10;
+            border-radius: 12px;
+            outline: none;
+            transition: box-shadow 0.2s;
+        }
+        .doodle-input:focus {
+            box-shadow: 0 0 0 3px #bfdbfe;
+        }
+
+        /* 토스트 메시지 스타일 */
+        #toast {
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0s, opacity 0.5s linear;
+        }
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
         }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4 select-none">
 
     <!-- 메인 컨테이너 -->
-    <div id="app" class="w-full max-w-md bg-white doodle-box p-6 relative overflow-hidden min-h-[600px] flex flex-col">
+    <div id="app" class="w-full max-w-md bg-white doodle-box p-6 relative overflow-hidden min-h-[700px] flex flex-col">
         
         <!-- 장식용 배경 요소 (라켓, 나비) -->
         <div class="absolute top-2 right-2 opacity-10 pointer-events-none">
@@ -98,7 +114,7 @@
         </div>
 
         <!-- 1. 시작 화면 -->
-        <div id="start-screen" class="flex-1 flex flex-col items-center justify-center text-center space-y-8 animate-pop">
+        <div id="start-screen" class="flex-1 flex flex-col items-center justify-center text-center space-y-6 animate-pop w-full">
             <div class="space-y-2">
                 <span class="inline-block bg-butterfly-pink text-white px-3 py-1 rounded-full text-sm transform -rotate-6 border-2 border-slate-800">탁구 이론 완전 정복!</span>
                 <h1 class="text-4xl text-slate-800 leading-tight">
@@ -106,31 +122,35 @@
                 </h1>
             </div>
 
-            <!-- 귀여운 라켓 일러스트 (SVG) -->
-            <div class="relative w-40 h-40 animate-wiggle">
-                <!-- 라켓 -->
+            <!-- 귀여운 라켓 일러스트 -->
+            <div class="relative w-32 h-32 animate-wiggle">
                 <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-lg">
                     <path d="M45,50 L45,85 A5,5 0 0,0 55,85 L55,50" fill="#D4a373" stroke="#1e293b" stroke-width="3"/>
                     <circle cx="50" cy="40" r="35" fill="#E6007E" stroke="#1e293b" stroke-width="3"/>
                     <path d="M25,40 Q50,60 75,40" fill="none" stroke="#be185d" stroke-width="2" opacity="0.5"/>
                 </svg>
-                <!-- 공 -->
-                <div class="absolute top-0 right-0 w-8 h-8 bg-orange-400 rounded-full border-2 border-slate-800 animate-bounce"></div>
+                <div class="absolute top-0 right-0 w-6 h-6 bg-orange-400 rounded-full border-2 border-slate-800 animate-bounce"></div>
             </div>
 
-            <p class="text-slate-600 text-lg">
-                빠르게 맞출수록 점수가 올라가요!<br>
-                준비 되셨나요?
-            </p>
+            <!-- 사용자 정보 입력란 추가 -->
+            <div class="w-full space-y-3 px-4">
+                <div class="text-left">
+                    <label class="block text-slate-600 mb-1 ml-1 text-sm">닉네임</label>
+                    <input type="text" id="input-nickname" placeholder="탁구왕김탁구" class="w-full p-3 doodle-input bg-slate-50 text-slate-800 placeholder-slate-400 text-lg text-center">
+                </div>
+                <div class="text-left">
+                    <label class="block text-slate-600 mb-1 ml-1 text-sm">탁구 부수 (실력)</label>
+                    <input type="text" id="input-busu" placeholder="예: 7부, 희망부" class="w-full p-3 doodle-input bg-slate-50 text-slate-800 placeholder-slate-400 text-lg text-center">
+                </div>
+            </div>
 
-            <button onclick="startGame()" class="w-full py-4 bg-butterfly-blue text-white text-2xl doodle-btn hover:bg-blue-700">
+            <button onclick="startGame()" class="w-full py-4 bg-butterfly-blue text-white text-2xl doodle-btn hover:bg-blue-700 mt-2">
                 게임 시작하기 🏓
             </button>
         </div>
 
         <!-- 2. 퀴즈 화면 -->
         <div id="quiz-screen" class="hidden flex-col h-full">
-            <!-- 상단 정보: 레벨 & 점수 -->
             <div class="flex justify-between items-center mb-4">
                 <div class="text-xl text-slate-700">Q. <span id="current-q-num" class="text-butterfly-pink text-2xl">1</span>/<span id="total-q-num">5</span></div>
                 <div class="bg-yellow-100 px-4 py-1 rounded-full border-2 border-slate-800 text-slate-800">
@@ -138,26 +158,19 @@
                 </div>
             </div>
 
-            <!-- 타이머 바 -->
             <div class="w-full h-4 bg-slate-200 rounded-full border-2 border-slate-800 mb-6 overflow-hidden relative">
                 <div id="timer-bar" class="h-full bg-butterfly-pink transition-all duration-100 ease-linear w-full"></div>
-                <!-- 반짝이는 효과 -->
                 <div class="absolute top-0 left-0 w-full h-1 bg-white opacity-30 rounded-full"></div>
             </div>
 
-            <!-- 문제 영역 -->
             <div class="bg-blue-50 p-6 rounded-2xl border-2 border-slate-800 mb-6 relative shadow-md">
-                <!-- 장식용 핀 -->
                 <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-red-500 rounded-full border-2 border-slate-800"></div>
                 <h2 id="question-text" class="text-2xl text-center text-slate-800 leading-snug break-keep">
                     여기에 문제가 표시됩니다.
                 </h2>
             </div>
 
-            <!-- 보기 버튼 영역 -->
-            <div id="options-container" class="grid grid-cols-1 gap-3 flex-1 content-start">
-                <!-- 버튼들은 JS로 동적 생성됨 -->
-            </div>
+            <div id="options-container" class="grid grid-cols-1 gap-3 flex-1 content-start"></div>
         </div>
 
         <!-- 3. 결과/피드백 모달 -->
@@ -181,11 +194,20 @@
         </div>
 
         <!-- 4. 최종 결과 화면 -->
-        <div id="end-screen" class="hidden flex-col items-center justify-center h-full text-center space-y-6 animate-pop">
+        <div id="end-screen" class="hidden flex-col items-center justify-center h-full text-center space-y-4 animate-pop w-full">
             <div class="text-6xl mb-2">🏆</div>
             <h2 class="text-3xl text-slate-800">퀴즈 완료!</h2>
             
             <div class="w-full bg-yellow-50 p-6 doodle-box relative">
+                <!-- 결과 상세 정보 -->
+                <div class="border-b-2 border-slate-200 pb-3 mb-3">
+                    <p class="text-slate-500 text-sm mb-1"><span id="final-date">2023.01.01</span></p>
+                    <h3 class="text-xl text-slate-800 font-bold">
+                        <span id="final-nickname" class="text-butterfly-blue">닉네임</span>
+                        <span class="text-sm font-normal text-slate-500"> (<span id="final-busu">7부</span>)</span>
+                    </h3>
+                </div>
+
                 <p class="text-slate-500 mb-2">최종 점수</p>
                 <div class="text-5xl text-butterfly-pink drop-shadow-md font-bold mb-2">
                     <span id="final-score">0</span>점
@@ -199,15 +221,25 @@
                 조금 더 연습하면 국가대표도 가능하겠는데요?
             </p>
 
-            <button onclick="restartGame()" class="w-full py-4 bg-slate-800 text-white text-2xl doodle-btn hover:bg-slate-700">
-                다시 도전하기 🔄
-            </button>
+            <div class="flex flex-col w-full gap-3 mt-4">
+                <button onclick="shareResult()" class="w-full py-3 bg-share-green text-white text-xl doodle-btn hover:bg-green-600">
+                    결과 공유하기 📤
+                </button>
+                <button onclick="restartGame()" class="w-full py-3 bg-slate-800 text-white text-xl doodle-btn hover:bg-slate-700">
+                    다시 도전하기 🔄
+                </button>
+            </div>
+        </div>
+
+        <!-- 토스트 메시지 -->
+        <div id="toast" class="absolute bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-lg border-2 border-white z-50 text-center w-max max-w-[90%]">
+            결과가 복사되었습니다!
         </div>
 
     </div>
 
     <script>
-        // 퀴즈 데이터 (서브, 드라이브, 스매싱, 리시브 등)
+        // 퀴즈 데이터
         const quizData = [
             {
                 question: "공에 전진 회전을 걸어 상대 코트로 빠르게 떨어지게 만드는 공격 기술은?",
@@ -241,38 +273,65 @@
             }
         ];
 
-        // 게임 상태 변수
         let currentQuestionIndex = 0;
         let score = 0;
         let timerInterval;
-        let timeLeft = 100; // 퍼센트
-        const MAX_TIME_SECONDS = 10; // 문제당 시간
+        let timeLeft = 100;
+        const MAX_TIME_SECONDS = 10;
+        
+        // 사용자 정보
+        let userNickname = "";
+        let userBusu = "";
 
-        // DOM 요소
         const app = document.getElementById('app');
         const startScreen = document.getElementById('start-screen');
         const quizScreen = document.getElementById('quiz-screen');
         const endScreen = document.getElementById('end-screen');
         const feedbackModal = document.getElementById('feedback-modal');
-        
         const questionText = document.getElementById('question-text');
         const optionsContainer = document.getElementById('options-container');
         const currentQNum = document.getElementById('current-q-num');
         const totalQNum = document.getElementById('total-q-num');
         const scoreDisplay = document.getElementById('score');
         const timerBar = document.getElementById('timer-bar');
-
         const feedbackTitle = document.getElementById('feedback-title');
         const feedbackIcon = document.getElementById('feedback-icon');
         const feedbackScore = document.getElementById('feedback-score');
         const feedbackDesc = document.getElementById('feedback-desc');
-
+        
+        // 결과 화면 요소들
         const finalScoreDisplay = document.getElementById('final-score');
         const rankBadge = document.getElementById('rank-badge');
         const rankMessage = document.getElementById('rank-message');
+        const finalNickname = document.getElementById('final-nickname');
+        const finalBusu = document.getElementById('final-busu');
+        const finalDate = document.getElementById('final-date');
+        
+        // 입력 필드
+        const inputNickname = document.getElementById('input-nickname');
+        const inputBusu = document.getElementById('input-busu');
+        
+        const toast = document.getElementById('toast');
 
-        // 게임 시작
         function startGame() {
+            // 유효성 검사
+            const nickname = inputNickname.value.trim();
+            const busu = inputBusu.value.trim();
+
+            if (!nickname) {
+                showToast("닉네임을 입력해주세요!");
+                inputNickname.focus();
+                return;
+            }
+            if (!busu) {
+                showToast("부수를 입력해주세요!");
+                inputBusu.focus();
+                return;
+            }
+
+            userNickname = nickname;
+            userBusu = busu;
+
             score = 0;
             currentQuestionIndex = 0;
             scoreDisplay.innerText = score;
@@ -281,18 +340,15 @@
             startScreen.classList.add('hidden');
             endScreen.classList.add('hidden');
             quizScreen.classList.remove('hidden');
-            quizScreen.classList.add('flex'); // flex 속성 복구
-
+            quizScreen.classList.add('flex');
             loadQuestion();
         }
 
-        // 문제 로드
         function loadQuestion() {
             const currentData = quizData[currentQuestionIndex];
             currentQNum.innerText = currentQuestionIndex + 1;
             questionText.innerText = currentData.question;
             
-            // 보기 버튼 생성
             optionsContainer.innerHTML = '';
             currentData.options.forEach((option, index) => {
                 const btn = document.createElement('button');
@@ -301,25 +357,21 @@
                 btn.onclick = () => checkAnswer(index);
                 optionsContainer.appendChild(btn);
             });
-
-            // 타이머 리셋 및 시작
             resetTimer();
         }
 
-        // 타이머 로직
         function resetTimer() {
             clearInterval(timerInterval);
             timeLeft = 100;
             timerBar.style.width = '100%';
             timerBar.className = 'h-full bg-butterfly-pink transition-all duration-100 ease-linear w-full';
 
-            const tickRate = 100 / (MAX_TIME_SECONDS * 10); // 0.1초마다 감소량
+            const tickRate = 100 / (MAX_TIME_SECONDS * 10);
 
             timerInterval = setInterval(() => {
                 timeLeft -= tickRate;
                 timerBar.style.width = `${timeLeft}%`;
 
-                // 색상 변경 (시간 임박 시 빨간색)
                 if (timeLeft < 30) {
                     timerBar.classList.remove('bg-butterfly-pink');
                     timerBar.classList.add('bg-red-500');
@@ -327,18 +379,16 @@
 
                 if (timeLeft <= 0) {
                     clearInterval(timerInterval);
-                    checkAnswer(-1); // 시간 초과
+                    checkAnswer(-1);
                 }
             }, 100);
         }
 
-        // 정답 확인
         function checkAnswer(selectedIndex) {
             clearInterval(timerInterval);
             const currentData = quizData[currentQuestionIndex];
             const isCorrect = selectedIndex === currentData.answer;
             
-            // 점수 계산 (기본점수 50 + 남은시간 보너스 최대 50)
             let pointsEarned = 0;
             if (isCorrect) {
                 const timeBonus = Math.max(0, Math.floor((timeLeft / 100) * 50));
@@ -350,10 +400,8 @@
             showFeedback(isCorrect, pointsEarned, currentData.explanation);
         }
 
-        // 피드백 모달 표시
         function showFeedback(isCorrect, points, explanation) {
             feedbackModal.classList.remove('hidden');
-            
             if (isCorrect) {
                 feedbackIcon.innerText = "🎉";
                 feedbackTitle.innerText = "정답입니다!";
@@ -365,15 +413,12 @@
                 feedbackTitle.className = "text-3xl mb-2 font-bold text-slate-500";
                 feedbackScore.innerText = timeLeft <= 0 ? "시간 초과!" : "다시 한번 생각해봐요!";
             }
-            
             feedbackDesc.innerText = explanation;
         }
 
-        // 다음 문제로 이동
         function nextQuestion() {
             feedbackModal.classList.add('hidden');
             currentQuestionIndex++;
-
             if (currentQuestionIndex < quizData.length) {
                 loadQuestion();
             } else {
@@ -381,16 +426,20 @@
             }
         }
 
-        // 게임 종료
         function endGame() {
             quizScreen.classList.add('hidden');
             quizScreen.classList.remove('flex');
             endScreen.classList.remove('hidden');
             endScreen.classList.add('flex');
 
+            // 결과 화면 업데이트
             finalScoreDisplay.innerText = score;
+            finalNickname.innerText = userNickname;
+            finalBusu.innerText = userBusu;
+            
+            const today = new Date();
+            finalDate.innerText = today.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
 
-            // 점수에 따른 등급 및 메시지
             if (score >= 450) {
                 rankBadge.innerText = "🏓 탁구의 신";
                 rankMessage.innerText = "완벽해요! 탁구 이론 마스터시네요. 이제 실전으로 가볼까요?";
@@ -406,9 +455,56 @@
             }
         }
 
-        // 재시작
         function restartGame() {
-            startGame();
+            // 입력 정보 초기화는 선택사항 (여기서는 유지하고 재도전)
+            score = 0;
+            currentQuestionIndex = 0;
+            scoreDisplay.innerText = score;
+            
+            endScreen.classList.add('hidden');
+            endScreen.classList.remove('flex');
+            
+            // 재시작 시 퀴즈 화면으로 바로 가기 (닉네임 유지)
+            quizScreen.classList.remove('hidden');
+            quizScreen.classList.add('flex');
+            loadQuestion();
+            
+            // 만약 처음으로 완전히 돌아가고 싶다면 아래 주석 해제
+            // startScreen.classList.remove('hidden');
+            // inputNickname.value = "";
+            // inputBusu.value = "";
+        }
+
+        // 결과 공유 기능 (업데이트됨)
+        function shareResult() {
+            const dateStr = new Date().toLocaleDateString('ko-KR');
+            const shareText = `🏓 버터플라이 랠리 퀴즈 결과 🏓\n\n👤 선수: ${userNickname} (${userBusu})\n📅 날짜: ${dateStr}\n\n🏆 점수: ${score}점\n🏅 등급: ${rankBadge.innerText}\n\n탁구 이론 완전 정복! 당신도 도전해보세요!`;
+            
+            // 텍스트 복사를 위한 임시 요소 생성 (아이프레임 호환성 고려)
+            const textArea = document.createElement("textarea");
+            textArea.value = shareText;
+            document.body.appendChild(textArea);
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                showToast("결과가 복사되었습니다! 친구들에게 공유해보세요.");
+            } catch (err) {
+                console.error('복사 실패', err);
+                showToast("복사에 실패했습니다.");
+            }
+            
+            document.body.removeChild(textArea);
+        }
+
+        // 토스트 메시지 표시
+        function showToast(message) {
+            toast.innerText = message;
+            toast.classList.add("show");
+            
+            setTimeout(() => {
+                toast.classList.remove("show");
+            }, 3000);
         }
     </script>
 </body>
